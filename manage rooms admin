@@ -1,0 +1,230 @@
+import { useState, type FormEvent } from "react";
+import { Modal } from "./AdminLayout";
+import { ROOM_TYPES, useRooms, useShowtimes, type Room, type RoomType } from "./adminStore";
+
+interface RoomForm {
+  name: string;
+  type: RoomType;
+  rows: string;
+  seatsPerRow: string;
+}
+
+const EMPTY_FORM: RoomForm = { name: "", type: "2D", rows: "8", seatsPerRow: "12" };
+
+const MAX_ROWS = 26; // A–Z
+const MAX_SEATS_PER_ROW = 30;
+
+export default function ManageRooms() {
+  const { items: rooms, add, update, remove } = useRooms();
+  const { items: showtimes } = useShowtimes();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<RoomForm>(EMPTY_FORM);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const setField = <K extends keyof RoomForm>(key: K, value: RoomForm[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const previewCapacity = (Number(form.rows) || 0) * (Number(form.seatsPerRow) || 0);
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setError("");
+    setIsOpen(true);
+  };
+
+  const openEdit = (room: Room) => {
+    setEditingId(room.id);
+    setForm({
+      name: room.name,
+      type: room.type,
+      rows: String(room.rows),
+      seatsPerRow: String(room.seatsPerRow),
+    });
+    setError("");
+    setIsOpen(true);
+  };
+
+  const closeModal = () => setIsOpen(false);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+
+    const name = form.name.trim();
+    const rows = Number(form.rows);
+    const seatsPerRow = Number(form.seatsPerRow);
+
+    if (!name) return setError("Vui lòng nhập tên phòng.");
+    if (rooms.some((r) => r.id !== editingId && r.name.toLowerCase() === name.toLowerCase())) {
+      return setError("Tên phòng đã tồn tại.");
+    }
+    if (!Number.isInteger(rows) || rows < 1 || rows > MAX_ROWS) {
+      return setError(`Số hàng ghế phải từ 1 đến ${MAX_ROWS}.`);
+    }
+    if (!Number.isInteger(seatsPerRow) || seatsPerRow < 1 || seatsPerRow > MAX_SEATS_PER_ROW) {
+      return setError(`Số ghế mỗi hàng phải từ 1 đến ${MAX_SEATS_PER_ROW}.`);
+    }
+
+    const payload = { name, type: form.type, rows, seatsPerRow };
+    if (editingId) update(editingId, payload);
+    else add(payload);
+
+    setNotice("");
+    closeModal();
+  };
+
+  const handleDelete = (room: Room) => {
+    if (showtimes.some((s) => s.roomId === room.id)) {
+      setNotice(`Không thể xóa "${room.name}" vì phòng đang có suất chiếu. Hãy xóa suất chiếu trước.`);
+      return;
+    }
+    if (window.confirm(`Xóa phòng "${room.name}"?`)) {
+      remove(room.id);
+      setNotice("");
+    }
+  };
+
+  return (
+    <>
+      <div className="adm-head">
+        <div>
+          <h1>Quản lý phòng chiếu</h1>
+          <p className="adm-sub">{rooms.length} phòng chiếu</p>
+        </div>
+        <button type="button" className="adm-btn primary" onClick={openCreate}>
+          Thêm phòng
+        </button>
+      </div>
+
+      {notice && (
+        <div className="adm-notice" role="alert">
+          <span>{notice}</span>
+          <button type="button" className="adm-icon-btn" onClick={() => setNotice("")} aria-label="Ẩn thông báo">
+            ×
+          </button>
+        </div>
+      )}
+
+      <div className="adm-card">
+        {rooms.length === 0 ? (
+          <p className="adm-empty">Chưa có phòng chiếu. Bấm "Thêm phòng" để bắt đầu.</p>
+        ) : (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>Tên phòng</th>
+                  <th>Loại</th>
+                  <th className="num">Số hàng</th>
+                  <th className="num">Ghế mỗi hàng</th>
+                  <th className="num">Sức chứa</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {rooms.map((room) => (
+                  <tr key={room.id}>
+                    <td>
+                      <strong>{room.name}</strong>
+                    </td>
+                    <td>
+                      <span className="adm-badge">{room.type}</span>
+                    </td>
+                    <td className="num">{room.rows}</td>
+                    <td className="num">{room.seatsPerRow}</td>
+                    <td className="num">{room.rows * room.seatsPerRow} ghế</td>
+                    <td>
+                      <div className="adm-actions">
+                        <button type="button" className="adm-btn small" onClick={() => openEdit(room)}>
+                          Sửa
+                        </button>
+                        <button type="button" className="adm-btn small danger" onClick={() => handleDelete(room)}>
+                          Xóa
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {isOpen && (
+        <Modal title={editingId ? "Sửa phòng chiếu" : "Thêm phòng chiếu"} onClose={closeModal}>
+          <form className="adm-form" onSubmit={handleSubmit} noValidate>
+            <div className="adm-field">
+              <label htmlFor="room-name">Tên phòng</label>
+              <input
+                id="room-name"
+                className="adm-input"
+                value={form.name}
+                onChange={(e) => setField("name", e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="adm-field">
+              <label htmlFor="room-type">Loại phòng</label>
+              <select
+                id="room-type"
+                className="adm-select"
+                value={form.type}
+                onChange={(e) => setField("type", e.target.value as RoomType)}
+              >
+                {ROOM_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="adm-field">
+              <label htmlFor="room-rows">Số hàng ghế</label>
+              <input
+                id="room-rows"
+                className="adm-input"
+                type="number"
+                min={1}
+                max={MAX_ROWS}
+                value={form.rows}
+                onChange={(e) => setField("rows", e.target.value)}
+              />
+            </div>
+            <div className="adm-field">
+              <label htmlFor="room-seats">Số ghế mỗi hàng</label>
+              <input
+                id="room-seats"
+                className="adm-input"
+                type="number"
+                min={1}
+                max={MAX_SEATS_PER_ROW}
+                value={form.seatsPerRow}
+                onChange={(e) => setField("seatsPerRow", e.target.value)}
+              />
+            </div>
+            <p className="adm-hint adm-field full">Sức chứa: {previewCapacity} ghế</p>
+
+            {error && (
+              <p className="adm-error" role="alert">
+                {error}
+              </p>
+            )}
+
+            <div className="adm-form-actions">
+              <button type="button" className="adm-btn" onClick={closeModal}>
+                Hủy
+              </button>
+              <button type="submit" className="adm-btn primary">
+                {editingId ? "Lưu thay đổi" : "Thêm phòng"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}
