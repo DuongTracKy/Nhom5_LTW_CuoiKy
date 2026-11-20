@@ -1,0 +1,180 @@
+import { useMemo } from "react";
+import {
+  formatDate,
+  formatVND,
+  offsetDate,
+  useBookings,
+  useMovies,
+  useRooms,
+  useShowtimes,
+} from "./adminStore";
+
+export default function Dashboard() {
+  const { items: movies } = useMovies();
+  const { items: rooms } = useRooms();
+  const { items: showtimes } = useShowtimes();
+  const { items: bookings } = useBookings();
+
+  const data = useMemo(() => {
+    const movieById = new Map(movies.map((m) => [m.id, m]));
+    const showtimeById = new Map(showtimes.map((s) => [s.id, s]));
+
+    const revenue = bookings.reduce((sum, b) => sum + b.total, 0);
+    const tickets = bookings.reduce((sum, b) => sum + b.seats, 0);
+
+    // Doanh thu 7 ngày gần nhất
+    const lastDays = Array.from({ length: 7 }, (_, i) => offsetDate(i - 6)).map((date) => ({
+      date,
+      total: bookings.filter((b) => b.createdAt === date).reduce((sum, b) => sum + b.total, 0),
+    }));
+    const maxDay = Math.max(...lastDays.map((d) => d.total), 0);
+
+    // Top phim theo doanh thu
+    const revenueByMovie = new Map<string, number>();
+    for (const b of bookings) {
+      const showtime = showtimeById.get(b.showtimeId);
+      if (!showtime) continue;
+      revenueByMovie.set(showtime.movieId, (revenueByMovie.get(showtime.movieId) ?? 0) + b.total);
+    }
+    const topMovies = [...revenueByMovie.entries()]
+      .map(([id, total]) => ({ id, title: movieById.get(id)?.title ?? "Phim đã xóa", total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+    const maxMovie = topMovies[0]?.total ?? 0;
+
+    const recent = [...bookings]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 6)
+      .map((b) => {
+        const showtime = showtimeById.get(b.showtimeId);
+        return {
+          ...b,
+          movieTitle: showtime ? (movieById.get(showtime.movieId)?.title ?? "Phim đã xóa") : "—",
+        };
+      });
+
+    const today = offsetDate(0);
+    return {
+      revenue,
+      tickets,
+      lastDays,
+      maxDay,
+      topMovies,
+      maxMovie,
+      recent,
+      showingCount: movies.filter((m) => m.status === "showing").length,
+      todayShowtimes: showtimes.filter((s) => s.date === today).length,
+    };
+  }, [movies, showtimes, bookings]);
+
+  return (
+    <>
+      <div className="adm-head">
+        <div>
+          <h1>Thống kê doanh thu</h1>
+          <p className="adm-sub">Tổng quan hoạt động của rạp</p>
+        </div>
+      </div>
+
+      <section className="adm-stats" aria-label="Chỉ số chính">
+        <div className="adm-card adm-stat">
+          <span>Tổng doanh thu</span>
+          <strong>{formatVND(data.revenue)}</strong>
+        </div>
+        <div className="adm-card adm-stat">
+          <span>Vé đã bán</span>
+          <strong>{data.tickets}</strong>
+        </div>
+        <div className="adm-card adm-stat">
+          <span>Phim đang chiếu</span>
+          <strong>{data.showingCount}</strong>
+        </div>
+        <div className="adm-card adm-stat">
+          <span>Suất chiếu hôm nay</span>
+          <strong>{data.todayShowtimes}</strong>
+        </div>
+        <div className="adm-card adm-stat">
+          <span>Phòng chiếu</span>
+          <strong>{rooms.length}</strong>
+        </div>
+      </section>
+
+      <div className="adm-grid-2">
+        <section className="adm-card adm-panel">
+          <h2>Doanh thu 7 ngày gần nhất</h2>
+          <div className="adm-chart">
+            {data.lastDays.map((day) => {
+              const height = data.maxDay > 0 ? Math.max(3, (day.total / data.maxDay) * 100) : 3;
+              return (
+                <div className="adm-chart-col" key={day.date}>
+                  <div
+                    className="adm-chart-bar"
+                    style={{ height: `${height}%` }}
+                    title={`${formatDate(day.date)}: ${formatVND(day.total)}`}
+                  />
+                  <span className="adm-chart-label">{formatDate(day.date).slice(0, 5)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="adm-card adm-panel">
+          <h2>Phim doanh thu cao nhất</h2>
+          {data.topMovies.length === 0 ? (
+            <p className="adm-sub">Chưa có dữ liệu đặt vé.</p>
+          ) : (
+            <ul className="adm-rank">
+              {data.topMovies.map((movie) => (
+                <li key={movie.id}>
+                  <div className="adm-rank-row">
+                    <span>{movie.title}</span>
+                    <strong>{formatVND(movie.total)}</strong>
+                  </div>
+                  <div className="adm-rank-track">
+                    <div
+                      className="adm-rank-fill"
+                      style={{ width: `${(movie.total / data.maxMovie) * 100}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <section className="adm-card">
+        <div className="adm-panel" style={{ paddingBottom: 0 }}>
+          <h2>Đặt vé gần đây</h2>
+        </div>
+        {data.recent.length === 0 ? (
+          <p className="adm-empty">Chưa có đơn đặt vé nào.</p>
+        ) : (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>Phim</th>
+                  <th>Ngày đặt</th>
+                  <th className="num">Số vé</th>
+                  <th className="num">Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recent.map((b) => (
+                  <tr key={b.id}>
+                    <td>{b.movieTitle}</td>
+                    <td>{formatDate(b.createdAt)}</td>
+                    <td className="num">{b.seats}</td>
+                    <td className="num">{formatVND(b.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
