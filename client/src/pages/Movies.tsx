@@ -1,11 +1,10 @@
-import type { Movie } from '../types';
+import { useCatalog } from '../context/CatalogContext';
 import { useState } from 'react';
 import MovieCard from '../components/MovieCard';
 import { Loading, ErrorMessage } from '../components/Status';
-import useFetch from '../hooks/useFetch';
 
 export default function Movies() {
-  const { data, loading, error, retry } = useFetch<Movie[]>(import.meta.env.BASE_URL + 'data/movies.json');
+  const { movies: data, loading, error, retry } = useCatalog();
   const [keyword, setKeyword] = useState('');
   const [genre, setGenre] = useState('Tất cả');
 

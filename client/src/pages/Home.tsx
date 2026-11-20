@@ -1,4 +1,5 @@
-import type { Movie, Offer } from '../types';
+import type { Offer } from '../types';
+import { useCatalog } from '../context/CatalogContext';
 import { Link } from 'react-router-dom';
 import MovieCard from '../components/MovieCard';
 import OfferCard from '../components/OfferCard';
@@ -6,7 +7,7 @@ import { Loading, ErrorMessage } from '../components/Status';
 import useFetch from '../hooks/useFetch';
 
 export default function Home() {
-  const movies = useFetch<Movie[]>(import.meta.env.BASE_URL + 'data/movies.json');
+  const movies = useCatalog();
   const offers = useFetch<Offer[]>(import.meta.env.BASE_URL + 'data/offers.json');
 
   return (
@@ -26,7 +27,7 @@ export default function Home() {
 
       <section className="container section">
         <div className="section-heading"><div><p className="eyebrow">CÙNG RA RẠP NÀO</p><h2>Phim đang chiếu</h2></div><Link className="see-all" to="/phim">Xem tất cả phim →</Link></div>
-        {movies.loading ? <Loading /> : movies.error ? <ErrorMessage message={movies.error} onRetry={movies.retry} /> : <div className="movie-grid">{movies.data?.slice(0, 4).map(movie => <MovieCard key={movie.id} movie={movie} />)}</div>}
+        {movies.loading ? <Loading /> : movies.error ? <ErrorMessage message={movies.error} onRetry={movies.retry} /> : <div className="movie-grid">{movies.movies.slice(0, 4).map(movie => <MovieCard key={movie.id} movie={movie} />)}</div>}
       </section>
 
       <section className="promo-strip"><div className="container promo-inner"><div className="promo-icon">💳</div><div><span className="eyebrow">CHƯƠNG TRÌNH THÀNH VIÊN</span><h2>THẺ CỨNG “COME BACK”!</h2><p>Giao diện thẻ thành viên mới dành cho khán giả yêu điện ảnh.</p></div><Link to="/uu-dai/the-cung-comeback" className="btn btn-dark">Khám phá ngay →</Link></div></section>
