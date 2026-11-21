@@ -26,12 +26,13 @@ export default function Layout() {
             <NavLink to="/phim">Phim</NavLink>
             <NavLink to="/rap">Rạp CGV</NavLink>
             <NavLink to="/uu-dai">Tin mới & Ưu đãi</NavLink>
+            {user?.role === 'admin' && <NavLink to="/admin">Quản trị</NavLink>}
             <NavLink to="/ve-cua-toi">Vé của tôi <span className="ticket-count">{myTickets.length}</span></NavLink>
           </nav>
           <div className="account-area">
             {user ? (
               <><span className="user-name">Xin chào, {user.name}</span><button className="link-button" onClick={handleLogout}>Đăng xuất</button></>
-            ) : <Link className="login-link" to="/dang-nhap">Đăng nhập</Link>}
+            ) : <><Link className="login-link" to="/dang-nhap">Đăng nhập</Link><Link className="login-link" to="/dang-ky">Đăng ký</Link></>}
           </div>
         </div>
       </header>

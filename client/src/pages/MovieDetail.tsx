@@ -1,13 +1,12 @@
-import type { Movie } from '../types';
+import { useCatalog } from '../context/CatalogContext';
 import { Link, useParams } from 'react-router-dom';
 import { MoviePoster } from '../components/MovieCard';
 import { Loading, ErrorMessage } from '../components/Status';
-import useFetch from '../hooks/useFetch';
 import { formatPrice } from '../utils/booking';
 
 export default function MovieDetail() {
   const { id } = useParams(); // Route tham số: /phim/:id
-  const { data, loading, error, retry } = useFetch<Movie[]>(import.meta.env.BASE_URL + 'data/movies.json');
+  const { movies: data, loading, error, retry } = useCatalog();
   if (loading) return <div className="container page-section"><Loading /></div>;
   if (error) return <div className="container page-section"><ErrorMessage message={error} onRetry={retry} /></div>;
 

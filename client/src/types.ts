@@ -37,6 +37,23 @@ export interface Cinema {
 export interface User {
   name: string;
   email: string;
+  role?: 'customer' | 'admin'; // Vai trò demo, không phải phân quyền an toàn
+}
+
+export interface Room {
+  id: string;
+  cinemaId: string;
+  name: string;
+  capacity: number;
+}
+
+export interface Showtime {
+  id: string;
+  movieId: string;
+  cinemaId: string;
+  roomId: string;
+  date: string;
+  time: string;
 }
 
 export interface Ticket {
@@ -44,6 +61,8 @@ export interface Ticket {
   movieId: string;
   movie: string;
   cinema: string;
+  cinemaId?: string;
+  roomId?: string;
   date: string;
   time: string;
   seats: string[];

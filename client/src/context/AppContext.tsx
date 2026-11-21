@@ -5,10 +5,11 @@ import type { NewTicket, Ticket, User } from '../types';
 // Kiểu dữ liệu mà mọi component có thể sử dụng qua Context.
 interface AppContextValue {
   user: User | null;
-  login: (name: string, email: string) => void;
+  login: (name: string, email: string, role?: 'customer' | 'admin') => void;
   logout: () => void;
   addTicket: (ticket: NewTicket) => string;
   myTickets: Ticket[];
+  tickets: Ticket[];
 }
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -32,8 +33,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('cgv_tickets', JSON.stringify(tickets));
   }, [tickets]);
 
-  function login(name: string, email: string) {
-    const nextUser: User = { name, email };
+  function login(name: string, email: string, role: 'customer' | 'admin' = 'customer') {
+    const nextUser: User = { name, email, role };
     setUser(nextUser);
     localStorage.setItem('cgv_user', JSON.stringify(nextUser));
   }
@@ -52,7 +53,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const myTickets = user ? tickets.filter(ticket => ticket.email === user.email) : [];
 
   return (
-    <AppContext.Provider value={{ user, login, logout, addTicket, myTickets }}>
+    <AppContext.Provider value={{ user, login, logout, addTicket, myTickets, tickets }}>
       {children}
     </AppContext.Provider>
   );

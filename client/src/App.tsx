@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
-import { useApp } from './context/AppContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Movies from './pages/Movies';
 import MovieDetail from './pages/MovieDetail';
@@ -12,15 +11,11 @@ import Booking from './pages/Booking';
 import MyTickets from './pages/MyTickets';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
-
-function RequireLogin({ children }: { children: ReactNode }) {
-  const { user } = useApp();
-  const location = useLocation();
-  if (!user) {
-    return <Navigate to="/dang-nhap" state={{ from: location.pathname }} replace />;
-  }
-  return children;
-}
+import Register from './pages/Register';
+import Dashboard from './pages/admin/Dashboard';
+import ManageMovies from './pages/admin/ManageMovies';
+import ManageRooms from './pages/admin/ManageRooms';
+import ManageShowtimes from './pages/admin/ManageShowtimes';
 
 export default function App() {
   return (
@@ -32,9 +27,14 @@ export default function App() {
         <Route path="/rap" element={<Cinemas />} />
         <Route path="/uu-dai" element={<Offers />} />
         <Route path="/uu-dai/:id" element={<OfferDetail />} />
-        <Route path="/dat-ve/:id" element={<RequireLogin><Booking /></RequireLogin>} />
-        <Route path="/ve-cua-toi" element={<RequireLogin><MyTickets /></RequireLogin>} />
+        <Route path="/dat-ve/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
+        <Route path="/ve-cua-toi" element={<ProtectedRoute><MyTickets /></ProtectedRoute>} />
         <Route path="/dang-nhap" element={<Login />} />
+        <Route path="/dang-ky" element={<Register />} />
+        <Route path="/admin" element={<ProtectedRoute adminOnly><Dashboard /></ProtectedRoute>} />
+        <Route path="/admin/phim" element={<ProtectedRoute adminOnly><ManageMovies /></ProtectedRoute>} />
+        <Route path="/admin/phong" element={<ProtectedRoute adminOnly><ManageRooms /></ProtectedRoute>} />
+        <Route path="/admin/suat-chieu" element={<ProtectedRoute adminOnly><ManageShowtimes /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
