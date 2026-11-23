@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const showtimeSchema = new mongoose.Schema({
   movieId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'Movie',
     required: true,
   },
